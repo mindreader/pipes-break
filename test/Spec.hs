@@ -57,7 +57,7 @@ instance Arbitrary SomeNetworkString where
 arbitraryNetworkString :: Gen String
 arbitraryNetworkString = do
   n <- choose (1,1500)
-  (<> "\r\n") . concat <$> vectorOf n (frequency [(15, arbitrary), (1, return "\r\n")])
+  (<> "\r\n") . concat <$> vectorOf n (frequency [(15, arbitrary), (10, return "\r"), (10, return "\r"), (1, return "\r\n")])
 
 newtype SomeWords = SomeWords [String] deriving Show
 
