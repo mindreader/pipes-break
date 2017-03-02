@@ -1,8 +1,8 @@
 name:                pipes-lines
-version:             1.0.2
+version:             1.0.3
 synopsis:            Pipes for grouping by lines with carriage returns.
 description:
-  `pipes-lens` contains utility functions for splitting lines that involve carriage returns aka lines ending in \\r\\n
+  `pipes-lines` contains utility functions for splitting lines that involve carriage returns aka lines ending in \\r\\n
   .
   These are utility functions that were omitted from pipes-bytestring and pipes-text
 homepage:            https://github.com/mindreader/pipes-lines
