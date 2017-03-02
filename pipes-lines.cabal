@@ -1,5 +1,5 @@
 name:                pipes-lines
-version:             1.0.1
+version:             1.0.2
 synopsis:            Pipes for grouping by lines with carriage returns.
 description:
   `pipes-lens` contains utility functions for splitting lines that involve carriage returns aka lines ending in \\r\\n

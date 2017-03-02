@@ -2,7 +2,7 @@
 
 -- | This is equivalent to the <http://hackage.haskell.org/package/pipes-bytestring/docs/Pipes-ByteString.html#v:lines> except it works for lines delimited with "\\r\\n"
 --
--- Warning: Since this works on bytestrings, it assumes a particular encoding.  You should use "Pipes.Text.Split" if possible
+-- Warning: Since this works on bytestrings, it assumes a particular encoding.  You should use "Pipes.Text.Lines" if possible.
 
 module Pipes.ByteString.Lines (
   Pipes.ByteString.Lines.lines,
