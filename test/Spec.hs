@@ -24,28 +24,30 @@ import Data.List (mapAccumL, isSubsequenceOf)
 
 import Pipes.ByteString.Lines as PL
 
--- | Make up some words, combine them into a network stream, break network stream up randomly into chunks,
+import Debug.Trace
+
+-- | Make up some words, combine them into a stream, break stream up randomly into chunks,
 --   parse them back into words, ensure final words matches initial words
 prop_splitrn :: SomeWords -> Property
 prop_splitrn (SomeWords wds) = monadic runIdentity $ do
+   let sentence = B.intercalate "\r\n" (map B.pack wds) -- <> "\r\n"
    frags <- pick $ splitString sentence
-   let res = map B.unpack $ P.toList (P.folds mappend mempty id $ view PL.lines $ P.each frags)
-   -- monitor $ collect (show $ length frags)
-   assert (wds == res)
-   where
-     sentence = B.intercalate "\r\n" (map B.pack wds) <> "\r\n"
+   -- when (wds /= res) $ monitor (counterexample (show wds <> " /= " <> show res))
+   assert (wds == blah frags)
+
+blah frags = map B.unpack $ P.toList (P.folds mappend mempty id $ view PL.lines $ P.each frags)
 
 -- | Ensure identity property.
-prop_ident :: SomeNetworkString -> Property
-prop_ident (SomeNetworkString str) = monadic runIdentity $ do
-  let prod = P.yield str :: Producer B.ByteString Identity ()
-  assert (mconcat (P.toList $ over PL.lines id prod) == mconcat (P.toList prod))
-
--- | Ensure identity property even if stream is split up randomly into chunks.
-prop_ident_split :: SomeNetworkString -> Property
-prop_ident_split (SomeNetworkString str) = monadic runIdentity $ do
-  str' <- pick $ splitString str
-  assert (mconcat (P.toList $ over PL.lines id (P.each str')) == mconcat (P.toList (P.yield str)))
+-- prop_ident :: SomeNetworkString -> Property
+-- prop_ident (SomeNetworkString str) = monadic runIdentity $ do
+--   let prod = P.yield str :: Producer B.ByteString Identity ()
+--   assert (mconcat (P.toList $ over PL.lines id prod) == mconcat (P.toList prod))
+-- 
+-- -- | Ensure identity property even if stream is split up randomly into chunks.
+-- prop_ident_split :: SomeNetworkString -> Property
+-- prop_ident_split (SomeNetworkString str) = monadic runIdentity $ do
+--   str' <- pick $ splitString str
+--   assert (mconcat (P.toList $ over PL.lines id (P.each str')) == mconcat (P.toList (P.yield str)))
 
 newtype SomeNetworkString = SomeNetworkString B.ByteString deriving Show
 
@@ -57,15 +59,16 @@ instance Arbitrary SomeNetworkString where
 arbitraryNetworkString :: Gen String
 arbitraryNetworkString = do
   n <- choose (1,1500)
-  (<> "\r\n") . concat <$> vectorOf n (frequency [(15, arbitrary), (10, return "\r"), (10, return "\r"), (1, return "\r\n")])
+  concat <$> vectorOf n (frequency [(15, arbitrary), (10, return "\r"), (10, return "\r"), (1, return "\r\n")])
 
 newtype SomeWords = SomeWords [String] deriving Show
 
 instance Arbitrary SomeWords where
   arbitrary = arbitrarySomeWords
   shrink (SomeWords []) = []
-  shrink (SomeWords [word]) = [SomeWords [(tail word)], SomeWords [(take (length word - 1) word)]]
-  shrink (SomeWords wds) = [SomeWords (take (length wds - 1) wds), SomeWords (tail wds)]
+  shrink (SomeWords [word]) | length word > 1 = [SomeWords [tail word], SomeWords [init word]]
+  shrink (SomeWords [word]) = []
+  shrink (SomeWords wds) = [SomeWords (init wds), SomeWords (tail wds)]
 
 arbitrarySomeWords :: Gen SomeWords
 arbitrarySomeWords = do
@@ -74,7 +77,7 @@ arbitrarySomeWords = do
   where
     arbitraryWord :: Gen String
     arbitraryWord = do
-        len <- choose (0,300)
+        len <- choose (0,10)
         str <- vector len `suchThat` (not . isSubsequenceOf "\r\n")
         return str
 

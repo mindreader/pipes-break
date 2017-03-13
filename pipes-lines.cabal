@@ -26,6 +26,7 @@ library
     base >= 4.7 && < 5.0,
     pipes >= 4.0 && < 5.0,
     pipes-group >= 1.0 && < 2.0,
+    pipes-parse,
     bytestring >= 0.10 && < 0.12,
     text >= 1.2 && < 2.0
   ghc-options:         -Wall
