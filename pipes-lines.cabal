@@ -21,7 +21,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Pipes.ByteString.Lines,
                        Pipes.Text.Lines
-  other-modules:       Pipes.Lines
+                       , Pipes.Lines
+--  other-modules:       Pipes.Lines
   build-depends:
     base >= 4.7 && < 5.0,
     pipes >= 4.0 && < 5.0,

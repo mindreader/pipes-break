@@ -1,18 +1,13 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, DeriveGeneric, GeneralizedNewtypeDeriving #-}
 
 module Main (main) where
 
+
 import Test.QuickCheck
-import Test.QuickCheck.Monadic
 
-import Control.Lens (view, over)
-
-import Control.Monad (replicateM, void)
-import Control.Monad.Identity
+import Control.Monad (void)
 
 import Data.Tuple (swap)
-
-import Data.Monoid
 
 import qualified Data.ByteString.Char8 as B
 
@@ -20,79 +15,89 @@ import Pipes as P
 import qualified Pipes.Prelude as P
 import qualified Pipes.Group as P
 
-import Data.List (mapAccumL, isSubsequenceOf)
+import Data.List (mapAccumL, isInfixOf)
 
 import Pipes.ByteString.Lines as PL
 
-import Debug.Trace
+import Control.Monad.Identity
+import Pipes.Lines as PLInternal
 
--- | Make up some words, combine them into a stream, break stream up randomly into chunks,
---   parse them back into words, ensure final words matches initial words
-prop_splitrn :: SomeWords -> Property
-prop_splitrn (SomeWords wds) = monadic runIdentity $ do
-   let sentence = B.intercalate "\r\n" (map B.pack wds) -- <> "\r\n"
-   frags <- pick $ splitString sentence
-   -- when (wds /= res) $ monitor (counterexample (show wds <> " /= " <> show res))
-   assert (wds == blah frags)
+-- type BS = B.ByteString
 
-blah frags = map B.unpack $ P.toList (P.folds mappend mempty id $ view PL.lines $ P.each frags)
+-- debug :: (MonadIO m, Show a) => Producer a m (Producer a m r) -> m ()
+-- debug p = do
+--   (beg,rest) <- P.toListM' p
+--   end <- P.toListM (void rest)
+--      
+--   liftIO $ putStrLn $ "beg:" <> show beg
+--   liftIO $ putStrLn $ "rest:" <> show end
+--   return ()
 
--- | Ensure identity property.
--- prop_ident :: SomeNetworkString -> Property
--- prop_ident (SomeNetworkString str) = monadic runIdentity $ do
---   let prod = P.yield str :: Producer B.ByteString Identity ()
---   assert (mconcat (P.toList $ over PL.lines id prod) == mconcat (P.toList prod))
--- 
--- -- | Ensure identity property even if stream is split up randomly into chunks.
--- prop_ident_split :: SomeNetworkString -> Property
--- prop_ident_split (SomeNetworkString str) = monadic runIdentity $ do
---   str' <- pick $ splitString str
---   assert (mconcat (P.toList $ over PL.lines id (P.each str')) == mconcat (P.toList (P.yield str)))
+newtype LineyString = LineyString String deriving Show
 
-newtype SomeNetworkString = SomeNetworkString B.ByteString deriving Show
+instance Arbitrary LineyString where
+  arbitrary = LineyString <$> lineyString
 
-instance Arbitrary SomeNetworkString where
-  arbitrary = SomeNetworkString . B.pack <$> arbitraryNetworkString
-  shrink (SomeNetworkString "") = []
-  shrink (SomeNetworkString bs) = [SomeNetworkString (B.drop 1 bs)]
+-- A string with a lot of newlines and carriage returns in it.
+lineyString :: Gen String
+lineyString = do
+  n <- choose (1,100)
+  concat <$> vectorOf n (frequency [(15, arbitrary), (10, return "\r"), (10, return "\n"), (1, return "\r\n")])
 
-arbitraryNetworkString :: Gen String
-arbitraryNetworkString = do
-  n <- choose (1,1500)
-  concat <$> vectorOf n (frequency [(15, arbitrary), (10, return "\r"), (10, return "\r"), (1, return "\r\n")])
-
-newtype SomeWords = SomeWords [String] deriving Show
-
-instance Arbitrary SomeWords where
-  arbitrary = arbitrarySomeWords
-  shrink (SomeWords []) = []
-  shrink (SomeWords [word]) | length word > 1 = [SomeWords [tail word], SomeWords [init word]]
-  shrink (SomeWords [word]) = []
-  shrink (SomeWords wds) = [SomeWords (init wds), SomeWords (tail wds)]
-
-arbitrarySomeWords :: Gen SomeWords
-arbitrarySomeWords = do
-    numWords <- choose (1,100)
-    SomeWords <$> replicateM numWords arbitraryWord
+-- A string that most likely contains this delimiter or at least some parts of it in a few places
+arbitraryStringWithDelimiter :: String -> Gen String
+arbitraryStringWithDelimiter "" = arbitrary
+arbitraryStringWithDelimiter del = do
+  n <- choose (1,100)
+  mconcat <$> vectorOf n (oneof [return del, pieceOfDelim, someStr])
   where
-    arbitraryWord :: Gen String
-    arbitraryWord = do
-        len <- choose (0,10)
-        str <- vector len `suchThat` (not . isSubsequenceOf "\r\n")
-        return str
+    -- a long string where the delimiter is not contained in it
+    someStr = arbitrary `suchThat` (\str -> not (del `isInfixOf` str))
 
-splitString :: B.ByteString -> Gen [B.ByteString]
-splitString bs = do
- offsets <- arbitrarySplits (B.length bs - 1)
- let (rest, items) = mapAccumL (\str idx -> swap $ B.splitAt idx str) bs offsets
+    -- randomly pull out a peice of the delimiter
+    pieceOfDelim = do
+      beg <- choose (1,length del)
+      end <- choose (0, beg - 1)
+      return $ drop end $  take beg $ del
+
+-- For any delimiter, for any string that has pieces of that delimiter in it,
+-- which has been broken up into random chunks, every call to _breakBy should
+-- at least be advancing the stream on each call.
+prop_WillFinish :: String -> Property
+prop_WillFinish delimiter =
+  forAll (arbitraryStringWithDelimiter delimiter) $ \str ->
+    forAll (arbitrarySplit str) $ \frags ->
+      let remainder = runIdentity $ do
+            rest <- runEffect $ _breakBy (B.pack delimiter) (traverse (yield . B.pack) frags) >-> P.drain
+            B.unpack . mconcat <$> P.toListM (void rest)
+        
+      in length str > 0 ==> length str > length remainder
+
+-- For any delimiter, for any string that has pieces of that delimiter in it,
+-- which has been broken up into random chunks, grouped by delimiter, folded
+-- each producer back into a bytestring with the delimiter readded, the result
+-- should be exactly the same as the original sentence.
+prop_SplitTest :: String -> Property
+prop_SplitTest delimiter =
+  forAll (arbitraryStringWithDelimiter delimiter) $ \str ->
+    forAll (arbitrarySplit str) $ \frags ->
+      str === B.unpack (breakByThenBackToStr (B.pack <$> frags) (B.pack delimiter))
+  where
+    breakByThenBackToStr :: [B.ByteString] -> B.ByteString -> B.ByteString
+    breakByThenBackToStr frags br = B.intercalate br $ P.toList (P.folds mappend mempty id $ PL.breaksBy br $ P.each frags)
+
+arbitrarySplit :: String -> Gen [String]
+arbitrarySplit bs = do
+ offsets <- arbitrarySplits (length bs)
+ let (rest, items) = mapAccumL (\str idx -> swap $ splitAt idx str) bs offsets
  return $ items ++ [rest]
  where
    arbitrarySplits :: Int -> Gen [Int]
-   arbitrarySplits n = listOf (choose (1,10)) `suchThat` (\ls -> sum ls <= n)
-
+   arbitrarySplits n = listOf (choose (0,10)) `suchThat` (\ls -> sum ls <= n)
 
 return []
 runTests :: IO Bool
+-- runTests = $verboseCheckAll
 runTests = $quickCheckAll
 
 main :: IO ()

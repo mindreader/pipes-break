@@ -5,8 +5,8 @@
 -- Warning: Since this works on bytestrings, it assumes a particular encoding.  You should use "Pipes.Text.Lines" if possible.
 
 module Pipes.ByteString.Lines (
-  Pipes.ByteString.Lines.lines,
-  Pipes.ByteString.Lines.unlines, line
+  Pipes.ByteString.Lines.lines, Pipes.ByteString.Lines.unlines, line,
+  breaksBy, unBreaksBy, breakBy
 ) where
 
 import Pipes as P
@@ -42,5 +42,15 @@ unlines k p' = fmap _linesRn (k (_unLinesRn p'))
 -- "bar\r\nbaz\r\n"
 line :: (Monad m) => Producer B.ByteString m r -> Producer B.ByteString m (Producer B.ByteString m r)
 line = _lineRn
+
+--  _breaksBy, _unBreaksBy, _breakBy
+breakBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> Producer B.ByteString m (Producer B.ByteString m r)
+breakBy = _breakBy
+
+unBreaksBy :: (Monad m) => B.ByteString -> FreeT (Producer B.ByteString m) m r -> Producer B.ByteString m r
+unBreaksBy = _unBreaksBy
+
+breaksBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> FreeT (Producer B.ByteString m) m r
+breaksBy = _breaksBy
 
 
