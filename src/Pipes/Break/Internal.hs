@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase, OverloadedStrings, PartialTypeSignatures, NoMonomorphismRestriction, DeriveGeneric, Rank2Types #-}
 
-module Pipes.Lines.Internal (
-  _linesRn, _unLinesRn, _lineRn,
-  _breaksBy, _unBreaksBy, _breakBy
+module Pipes.Break.Internal (
+  _breaksBy, _unBreaksBy, _breakBy,
+  _endsBy, _unEndsBy, _endBy
 ) where
 
 
@@ -51,34 +51,26 @@ instance TextLike T.Text where
   tlDrop = T.drop
   tlIsPrefixOf = T.isPrefixOf
 
-_linesRn :: (TextLike a, Monad m) => Producer a m r -> FreeT (Producer a m) m r
-_linesRn = toFreeT _lineRn
-
-_unLinesRn ::(TextLike a, Monad m) => FreeT (Producer a m) m r -> Producer a m r
--- _unLinesRn = concats . maps (<* yield "\r\n")
-_unLinesRn = intercalates (yield "\r\n") -- concats . maps (<* yield "\r\n")
-
-
-_lineRn :: (TextLike a, Monad m) => Producer a m r -> Producer a m (Producer a m r)
-_lineRn = _breakBy "\r\n"
-
-
-_breaksBy :: (TextLike a, Monad m) => a -> Producer a m r -> FreeT (Producer a m) m r
+_breaksBy, _endsBy :: (TextLike a, Monad m) => a -> Producer a m r -> FreeT (Producer a m) m r
 _breaksBy = toFreeT . _breakBy
+_endsBy = toFreeT . _endBy
 
-_unBreaksBy :: (TextLike a, Monad m) => a -> FreeT (Producer a m) m r -> Producer a m r
+_unBreaksBy, _unEndsBy :: (TextLike a, Monad m) => a -> FreeT (Producer a m) m r -> Producer a m r
 _unBreaksBy = intercalates . yield
+_unEndsBy del = concats . maps (<* yield del)
 
-_breakBy :: (TextLike a, Monad m) => a -> Producer a m r -> Producer a m (Producer a m r)
+_breakBy, _endBy :: (TextLike a, Monad m) => a -> Producer a m r -> Producer a m (Producer a m r)
+
 _breakBy a p = lift (next p) >>= \case
     Left r -> return (return r)
     Right (bs, p') | tlNull a -> yield bs >> _breakBy a p'
     Right (bs, p') -> execStateT (breakByP a) (yield bs >> p')
 
+_endBy = _breakBy
 
--- | Group a producer of bytestrings into a series of producers delimited by f
---   The \r\n are dropped.
-toFreeT :: (TextLike a, Monad m) => (Producer a m r -> Producer a m (Producer a m r))  -> Producer a m r -> FreeT (Producer a m) m r
+
+-- | Group a producer of bytestrings into a series of producers delimited by f, where the delimiter is dropped
+toFreeT :: (TextLike a, Monad m) => (Producer a m r -> Producer a m (Producer a m r)) -> Producer a m r -> FreeT (Producer a m) m r
 toFreeT f = FreeT . go0
   where
     go0 p = do
@@ -93,9 +85,6 @@ toFreeT f = FreeT . go0
           Left r -> return (Pure r)
           Right (bs, p'') -> go0 (yield bs >> p'')
 
-
-
-
 -- Yield data from underlying producer before the delimiter, while stripping the delimeter out.
 breakByP :: (TextLike a, Monad m) => a -> ParserP a m ()
 breakByP str = go
@@ -104,7 +93,8 @@ breakByP str = go
       drawP >>= \case
         Nothing -> return ()
 
-        -- if chunk is null it must be yielded unaltered
+        -- if chunk is null it must be yielded unaltered in order to ever know a delimiter might be
+        -- about to be stripped away
         Just bs | tlNull bs -> yieldP bs >> go
         Just bs -> case tlBreakSubstring str bs of
                

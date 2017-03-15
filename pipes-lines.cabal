@@ -19,10 +19,11 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Pipes.ByteString.Lines,
-                       Pipes.Text.Lines,
-                       Pipes.Lines.Internal
---  other-modules:       Pipes.Lines
+  exposed-modules:     Pipes.Break.ByteString
+                       Pipes.Break.ByteString.Lens
+                       Pipes.Break.Text
+                       Pipes.Break.Text.Lens
+  other-modules:       Pipes.Break.Internal
   build-depends:
     base >= 4.7 && < 5.0,
     pipes >= 4.0 && < 5.0,
