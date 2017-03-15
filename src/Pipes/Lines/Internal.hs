@@ -124,7 +124,7 @@ breakByP str = go
                 Just n -> do
                   -- unless (tlNull bs || n <= 0) (yieldP (tlTake n bs))
                   yieldP (tlTake n bs)
-                  hoist lift (dropDelim (tlLength str - (tlLength bs - n)))
+                  hoist lift (dropChars (tlLength str - (tlLength bs - n)))
 
 
            -- non null suff means suff has delimiter.
@@ -134,11 +134,11 @@ breakByP str = go
               unDrawP (tlDrop (tlLength str) suff)
 
 
-dropDelim :: (TextLike a, Monad m) => Int -> P.Parser a m ()
-dropDelim 0 = return ()
-dropDelim n = draw >>= \case
+dropChars :: (TextLike a, Monad m) => Int -> P.Parser a m ()
+dropChars 0 = return ()
+dropChars n = draw >>= \case
   Nothing -> return ()
-  Just bs | n > tlLength bs -> dropDelim (n - tlLength bs)
+  Just bs | n > tlLength bs -> dropChars (n - tlLength bs)
   Just bs -> unDraw (tlDrop n bs)
 
 -- See if Producer with initial chunk ends with the delimiter anywhere after first n characters,
