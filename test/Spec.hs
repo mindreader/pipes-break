@@ -20,7 +20,7 @@ import Data.List (mapAccumL, isInfixOf)
 import Pipes.ByteString.Lines as PL
 
 import Control.Monad.Identity
-import Pipes.Lines as PLInternal
+import Pipes.Lines.Internal
 
 -- type BS = B.ByteString
 

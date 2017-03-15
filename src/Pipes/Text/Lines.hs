@@ -12,7 +12,7 @@ import Pipes.Group as P
 
 import qualified Data.Text as T
 
-import Pipes.Lines
+import Pipes.Lines.Internal
 
 type Lens' a b = forall f . Functor f => (b -> f b) -> (a -> f a)
 

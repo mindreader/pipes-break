@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase, OverloadedStrings, PartialTypeSignatures, NoMonomorphismRestriction, DeriveGeneric, Rank2Types #-}
 
-module Pipes.Lines (
+module Pipes.Lines.Internal (
   _linesRn, _unLinesRn, _lineRn,
   _breaksBy, _unBreaksBy, _breakBy
 ) where

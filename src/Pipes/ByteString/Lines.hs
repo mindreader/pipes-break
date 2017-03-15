@@ -14,7 +14,7 @@ import Pipes.Group as P
 
 import qualified Data.ByteString.Char8 as B
 
-import Pipes.Lines
+import Pipes.Lines.Internal
 
 type Lens' a b = forall f . Functor f => (b -> f b) -> (a -> f a)
 
