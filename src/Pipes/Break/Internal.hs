@@ -126,7 +126,7 @@ dropChars :: (TextLike a, Monad m) => Int -> P.Parser a m ()
 dropChars 0 = return ()
 dropChars n = draw >>= \case
   Nothing -> return ()
-  Just bs | n > tlLength bs -> dropChars (n - tlLength bs)
+  Just bs | n > tlLength bs -> dropChars $! (n - tlLength bs)
   Just bs -> unDraw (tlDrop n bs)
 
 -- See if Producer with initial chunk ends with the delimiter anywhere after first n characters,
