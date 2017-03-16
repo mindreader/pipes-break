@@ -107,7 +107,7 @@ breakByP str = go
               -- Starting with one less than the length of delimiter, test the end of this chunk.
               else hoist lift (chunkEndsWith str bs (max (tlLength bs - (tlLength str - 1)) 0)) >>= \case
 
-                -- The end of this chunk does begin with the delimiter, get more chunks, keep going.
+                -- The end of this chunk does not begin with the delimiter, get more chunks, keep going.
                 Nothing -> yieldP bs >> go
 
                 -- This chunk has a delimiter at index n, yield up to it, drop remainder of delimiter from rest of stream.
@@ -116,7 +116,7 @@ breakByP str = go
                   hoist lift (dropChars (tlLength str - (tlLength bs - n)))
 
            -- non null suff means suff has delimiter.
-           -- pref must be yielded if it is non null
+           -- pref must be yielded
            (pref, suff) -> do
               yieldP pref
               unDrawP (tlDrop (tlLength str) suff)
