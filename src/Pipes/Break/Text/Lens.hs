@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 
-{- | For those who like lenses, here are Lens library versions of the functions from Pipes.Break.Text
+{- | For those who like lenses, here are Lens library versions of the functions from "Pipes.Break.Text"
 
      To learn more about using lenses to manipulate pipes, check out the in depth tutorial at
      <http://hackage.haskell.org/package/pipes-group/docs/Pipes-Group-Tutorial.html>
@@ -9,10 +9,10 @@
      as lenses.
      For example, if your protocol were blocks of lines delimited by a double newline at the end (such as in email or http).
 
-> > fmap mconcat <$> P.toListM $
->     over (endsBy "\n\n" . individually) (over (endsBy "\n" . individually) id)
->        (yield "A\nB\n\nA\nB\nC\n\n")
-> "A\nB\n\n\nA\nB\nC\n\n\n\n\n"
+>>> fmap mconcat <$> P.toListM $
+>>>   over (endsBy "\n\n" . individually) (over (endsBy "\n" . individually) id)
+>>>        (yield "A\nB\n\nA\nB\nC\n\n")
+"A\nB\n\n\nA\nB\nC\n\n\n\n\n"
 
   As you can see, this would result in the wrong number of newlines being appended when reforming.
 -}
@@ -35,10 +35,10 @@ type Lens' a b = forall f . Functor f => (b -> f b) -> (a -> f a)
 
 {- $breakbyoverview
 
-> > fmap mconcat <$> P.toListM $
->    over (breaksBy "\n\n" . individually) (over (breaksBy "\n" . individually) (<* yield "!"))
->      (P.each ["A\nB","\n\n","A","","\nB\nC","\n\n"])
-> "A!\nB!\n\nA!\nB!\nC!\n\n"
+>>> fmap mconcat <$> P.toListM $
+>>>  over (breaksBy "\n\n" . individually) (over (breaksBy "\n" . individually) (<* yield "!"))
+>>>    (P.each ["A\nB","\n\n","A","","\nB\nC","\n\n"])
+"A!\nB!\n\nA!\nB!\nC!\n\n"
 -}
 
 

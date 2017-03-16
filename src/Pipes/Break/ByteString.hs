@@ -6,8 +6,10 @@ module Pipes.Break.ByteString (
   -- | Break any producer up into groups with the delimiter stripped out with the presumption that
   --   two 'Producer's are "equivalent" if they produce the same string when drained.
   --
-  -- > unBreaksBy delim (breaksBy delim foo) ≡ foo
-  -- > unBreakBy delim (breakBy delim foo) ≡ foo
+  -- @
+  --   'unBreaksBy' delim ('breaksBy' delim foo) ≡ foo
+  --   'unBreakBy' delim ('breakBy' delim foo) ≡ foo
+  -- @
   breakBy, unBreakBy, breaksBy, unBreaksBy,
 
   -- * Group Producers Ending By A Delimiter
@@ -18,13 +20,15 @@ module Pipes.Break.ByteString (
   --   ever end with a delimiter (or end at all for that matter). The only way to find out is to store every line you receive until you find it.
   --   Therefore, the endsBy family of functions are not invertible.
   --
-  -- > > mconcat $ Pipes.Prelude.toList (unEndsBy "\r\n" (endsBy "\r\n" (yield "A\r\nB\r\nC")))
-  -- > "A\r\nB\r\nC\r\n"
+  -- >>> mconcat $ Pipes.Prelude.toList (unEndsBy "\r\n" (endsBy "\r\n" (yield "A\r\nB\r\nC")))
+  -- "A\r\nB\r\nC\r\n"
   --
   -- In other words:
   --
-  -- > unEndsBy delim (endsBy delim foo) ≠ foo
-  -- > unEndBy delim (endBy delim foo) ≠ foo
+  -- @
+  --  'unEndsBy' delim ('endsBy' delim foo) ≠ foo
+  --  'unEndBy' delim ('endBy' delim foo) ≠ foo
+  -- @
   endBy, unEndBy, endsBy, unEndsBy,
 
   -- * Utilities
@@ -47,11 +51,11 @@ endBy = breakBy
 -- | Recombine a producer that had been previously broken by using a separator.  If the second stream is empty,
 --   the delimiter will be added on at the end of the first producer anyways.
 --
--- > > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (yield "def")))
--- > "abc\ndef"
+-- >>> mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (yield "def")))
+-- "abc\ndef"
 --
--- > > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (return ())))
--- > "abc\n"
+-- >>> mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (return ())))
+-- "abc\n"
 --
 -- This is /not/ equivalent to 'unBreakBy' and is not quite an inverse of 'endBy'.
 unEndBy :: (Monad m) => B.ByteString -> Producer B.ByteString m (Producer B.ByteString m r) -> Producer B.ByteString m r
@@ -59,11 +63,11 @@ unEndBy = _unEndBy
 
 -- | Recombine a producer that had been previously broken recombining it with the provided delimiter.
 --
--- > > mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (yield "def")))
--- > "abc\ndef"
+-- >>> mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (yield "def")))
+-- "abc\ndef"
 --
--- > > mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (return ())))
--- > "abc"
+-- >>> mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (return ())))
+-- "abc"
 --
 -- The inverse of 'breakBy'.
 unBreakBy :: (Monad m) => B.ByteString -> Producer B.ByteString m (Producer B.ByteString m r) -> Producer B.ByteString m r
@@ -86,11 +90,11 @@ breaksBy = _breaksBy
 
 -- | Yield argument until it reaches delimiter or end of stream, then returns the remainder (minus the delimiter).
 --
--- > > rest <- runEffect $ for (breakBy "\r\n" (yield "A\r\nB\r\nC\r\n")) (lift . Prelude.print)
--- > "A"
+-- >>> rest <- runEffect $ for (breakBy "\r\n" (yield "A\r\nB\r\nC\r\n")) (lift . Prelude.print)
+-- "A"
 --
--- > > runEffect $ for rest (lift . print)
--- > "B\r\nC\r\n"
+-- >>> runEffect $ for rest (lift . print)
+-- "B\r\nC\r\n"
 --
 -- This is almost equivalent to Pipes.ByteString.line except that it works for any delimiter, not just '\n',
 -- and it also consumes the delimiter.
@@ -99,7 +103,7 @@ breakBy = _breakBy
 
 -- | Replace one delimiter with another in a stream.
 --
--- > > fmap mconcat <$> toListM $ replace "\r\n" "\n" (yield "abc\ndef\r\nfoo\n\r\nbar")
--- > "abc\ndef\nfoo\n\nbar"
+-- >>> fmap mconcat <$> toListM $ replace "\r\n" "\n" (yield "abc\ndef\r\nfoo\n\r\nbar")
+-- "abc\ndef\nfoo\n\nbar"
 replace :: (Monad m) => B.ByteString -> B.ByteString -> Producer B.ByteString m r -> Producer B.ByteString m r
 replace from to = unBreaksBy to . breaksBy from
