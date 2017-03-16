@@ -71,8 +71,8 @@ prop_WillFinish delimiter =
       in length str > 0 ==> length str > length remainder
 
 -- Ensure invertibility of breaksBy and unBreaksBy
-prop_SplitEquiv :: String -> Property
-prop_SplitEquiv delimiter =
+prop_BreaksEquiv :: String -> Property
+prop_BreaksEquiv delimiter =
   forAll (arbitraryStringWithDelimiter delimiter) $ \str ->
     forAll (arbitrarySplit str) $ \frags ->
       str === B.unpack (breakByThenBackToStr (B.pack <$> frags) (B.pack delimiter))
