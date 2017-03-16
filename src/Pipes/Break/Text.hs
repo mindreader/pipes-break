@@ -3,12 +3,12 @@
 
 module Pipes.Break.Text (
   -- * Group Producers By A Delimiter
-  -- | Break any producer up into groups with the delimiter stripped out.
+  -- | Break any producer up into groups with the delimiter stripped out with the presumption that
+  --   two 'Producer's are "equivalent" if they produce the same string when drained.
   --
-  -- >>> unBreaksBy delim (breaksBy delim foo) ≡ foo
-  -- >>> unBreakBy delim (breakBy delim foo) ≡ foo
+  -- > unBreaksBy delim (breaksBy delim foo) ≡ foo
+  -- > unBreakBy delim (breakBy delim foo) ≡ foo
   --
-  -- with the presumption that two 'Producer's are "equivalent" if they produce the same string when drained.
   breakBy, unBreakBy, breaksBy, unBreaksBy,
 
   -- * Group Producers Ending By A Delimiter
@@ -19,12 +19,12 @@ module Pipes.Break.Text (
   --   ever end with a delimiter (or end at all for that matter). The only way to find out is to store every line you receive until you find it.
   --   Therefore, the endsBy family of functions are not invertible.
   --
-  -- >>> > mconcat $ Pipes.Prelude.toList (unEndsBy "\r\n" (endsBy "\r\n" (yield "A\r\nB\r\nC")))
-  -- >>> "A\r\nB\r\nC\r\n"
+  -- > > mconcat $ Pipes.Prelude.toList (unEndsBy "\r\n" (endsBy "\r\n" (yield "A\r\nB\r\nC")))
+  -- > "A\r\nB\r\nC\r\n"
   --
   -- In other words:
   --
-  -- >>> unEndsBy delim (endsBy delim foo) ≠ foo
+  -- > unEndsBy delim (endsBy delim foo) ≠ foo
   endBy, unEndBy, endsBy, unEndsBy,
 
   -- * Utilities
@@ -47,11 +47,11 @@ endBy = breakBy
 -- | Recombine a producer that had been previously broken by using a separator.  If the second stream is empty
 --   the delimiter will be added on at the end of the first producer anyways.
 --
--- >>> > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (yield "def")))
--- >>> "abc\ndef"
+-- > > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (yield "def")))
+-- > "abc\ndef"
 --
--- >>> > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (return ())))
--- >>> "abc\n"
+-- > > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (return ())))
+-- > "abc\n"
 --
 -- This is /not/ equivalent to 'unBreakBy' and is not quite an inverse of 'endBy'
 unEndBy :: (Monad m) => T.Text -> Producer T.Text m (Producer T.Text m r) -> Producer T.Text m r
@@ -59,15 +59,15 @@ unEndBy = _unEndBy
 
 -- | Recombine a producer that had been previously broken recombining it with the provided delimiter.
 --
--- >>> > mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (yield "def")))
--- >>> "abc\ndef"
+-- > > mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (yield "def")))
+-- > "abc\ndef"
 --
--- >>> > mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (return ())))
--- >>> "abc"
--- | The inverse of 'breakBy'
+-- > > mconcat $ Pipes.Prelude.toList (unBreakBy "\n" (yield "abc" >> return (return ())))
+-- > "abc"
+--
+-- The inverse of 'breakBy'
 unBreakBy :: (Monad m) => T.Text -> Producer T.Text m (Producer T.Text m r) -> Producer T.Text m r
 unBreakBy = _unBreakBy
-
 
 endsBy :: (Monad m) => T.Text -> Producer T.Text m r -> FreeT (Producer T.Text m) m r
 endsBy = _endsBy
