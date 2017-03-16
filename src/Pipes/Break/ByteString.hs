@@ -1,11 +1,15 @@
+-- | To learn more about pipes-group and how to use these functions with it, check out the in
+--   depth tutorial at <http://hackage.haskell.org/package/pipes-group/docs/Pipes-Group-Tutorial.html>
+
 module Pipes.Break.ByteString (
   -- * Group Producers By A Delimiter
   -- | Break any producer up into groups with the delimiter stripped out.
   --
   -- >>> unBreaksBy delim (breaksBy delim foo) ≡ foo
+  -- >>> unBreakBy delim (breakBy delim foo) ≡ foo
   --
   -- with the presumption that two 'Producer's are "equivalent" if they produce the same string when drained.
-  breakBy ,breaksBy, unBreaksBy,
+  breakBy, unBreakBy, breaksBy, unBreaksBy,
 
   -- * Group Producers Ending By A Delimiter
   -- | These are almost equivalent to the breakBy functions, however they imply that every chunk "ends" with a delimiter,
@@ -15,15 +19,16 @@ module Pipes.Break.ByteString (
   --   ever end with a delimiter (or end at all for that matter). The only way to find out is to store every line you receive until you find it.
   --   Therefore, the endsBy family of functions are not invertible.
   --
-  -- >>> > Pipes.Prelude.toList (unEndsBy "\r\n" (endsBy "\r\n" (yield "A\r\nB\r\nC")))
-  -- >>> ["A\r\nB\r\nC\r\n"]
+  -- >>> > mconcat $ Pipes.Prelude.toList (unEndsBy "\r\n" (endsBy "\r\n" (yield "A\r\nB\r\nC")))
+  -- >>> "A\r\nB\r\nC\r\n"
   --
   -- In other words:
   --
   -- >>> unEndsBy delim (endsBy delim foo) ≠ foo
-  --
-  -- unless foo happens to end with delim.
-  endBy, endsBy, unEndsBy
+  endBy, unEndBy, endsBy, unEndsBy,
+
+  -- * Utilities
+  replace
 ) where
 
 import Pipes as P
@@ -33,14 +38,34 @@ import qualified Data.ByteString.Char8 as B
 
 import Pipes.Break.Internal
 
--- | Yield argument until it reaches delimiter or end of stream, then return the remainder (minus the delimiter)
+-- | Yield argument until it reaches delimiter or end of stream, then return the remainder (minus the delimiter).
+--
+--   This is equivalent to 'breakBy'.
 endBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> Producer B.ByteString m (Producer B.ByteString m r)
-endBy = _endBy
+endBy = breakBy
+
+-- | Recombine a producer that had been previously broken by using a separator.  If the second stream is empty,
+--   the delimiter will be added on at the end of the first producer anyways.
+--
+-- >>> > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (yield "def")))
+-- >>> "abc\ndef"
+--
+-- >>> > mconcat $ Pipes.Prelude.toList (unEndBy "\n" (yield "abc" >> return (return ())))
+-- >>> "abc\n"
+--
+-- This is /not/ equivalent to 'unBreakBy' and is not quite an inverse of 'endBy'.
+unEndBy :: (Monad m) => B.ByteString -> Producer B.ByteString m (Producer B.ByteString m r) -> Producer B.ByteString m r
+unEndBy = _unEndBy
+
+-- | The inverse of 'breakBy'.
+unBreakBy :: (Monad m) => B.ByteString -> Producer B.ByteString m (Producer B.ByteString m r) -> Producer B.ByteString m r
+unBreakBy = _unBreakBy
+
 
 endsBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> FreeT (Producer B.ByteString m) m r
 endsBy = _endsBy
 
--- | Inverse of 'endsBy'.
+-- | Not quite the inverse of 'endsBy'.
 unEndsBy :: (Monad m) => B.ByteString -> FreeT (Producer B.ByteString m) m r -> Producer B.ByteString m r
 unEndsBy = _unEndsBy
 
@@ -52,15 +77,22 @@ unBreaksBy = _unBreaksBy
 breaksBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> FreeT (Producer B.ByteString m) m r
 breaksBy = _breaksBy
 
--- | Yield argument until it reaches delimiter or end of stream, then returns the remainder (minus the delimiter)
+-- | Yield argument until it reaches delimiter or end of stream, then returns the remainder (minus the delimiter).
 --
--- >>> rest <- runEffect $ for (breakBy "\r\n" (yield "A\r\nB\r\nC\r\n")) (lift . Prelude.print)
--- "A"
+-- > > rest <- runEffect $ for (breakBy "\r\n" (yield "A\r\nB\r\nC\r\n")) (lift . Prelude.print)
+-- > "A"
 --
--- >>> runEffect $ for rest (lift . print)
--- "B\r\nC\r\n"
+-- > > runEffect $ for rest (lift . print)
+-- > "B\r\nC\r\n"
 --
--- This is almost equivalent to Pipes.ByteString.line except that it works for any delimiter, not just '\n'.
--- It also consumes the delimiter.
+-- This is almost equivalent to Pipes.ByteString.line except that it works for any delimiter, not just '\n',
+-- and it also consumes the delimiter.
 breakBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> Producer B.ByteString m (Producer B.ByteString m r)
 breakBy = _breakBy
+
+-- | Replace one delimiter with another in a stream.
+--
+-- > > fmap mconcat <$> toListM $ replace "\r\n" "\n" (yield "abc\ndef\r\nfoo\n\r\nbar")
+-- > "abc\ndef\nfoo\n\nbar"
+replace :: (Monad m) => B.ByteString -> B.ByteString -> Producer B.ByteString m r -> Producer B.ByteString m r
+replace from to = unBreaksBy to . breaksBy from

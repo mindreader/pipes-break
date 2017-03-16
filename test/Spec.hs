@@ -13,7 +13,6 @@ import qualified Data.ByteString.Char8 as B
 
 import Pipes as P
 import qualified Pipes.Prelude as P
-import qualified Pipes.Group as P
 
 import Data.List (mapAccumL, isInfixOf)
 
@@ -36,7 +35,7 @@ import Control.Monad.Identity
 arbitraryStringWithDelimiter :: String -> Gen String
 arbitraryStringWithDelimiter "" = arbitrary
 arbitraryStringWithDelimiter del = do
-  n <- choose (1,100)
+  n <- choose (1,1000)
   mconcat <$> vectorOf n (oneof [return del, pieceOfDelim, someStr])
   where
     -- a long string where the delimiter is not contained in it
@@ -71,10 +70,7 @@ prop_WillFinish delimiter =
         
       in length str > 0 ==> length str > length remainder
 
--- For any delimiter, for any string that has pieces of that delimiter in it,
--- which has been broken up into random chunks, grouped by delimiter, folded
--- each producer back into a bytestring concatenated with the delimiter readded,
--- the result should be exactly the same as the original string.
+-- Ensure invertibility of breaksBy and unBreaksBy
 prop_SplitEquiv :: String -> Property
 prop_SplitEquiv delimiter =
   forAll (arbitraryStringWithDelimiter delimiter) $ \str ->
@@ -82,7 +78,15 @@ prop_SplitEquiv delimiter =
       str === B.unpack (breakByThenBackToStr (B.pack <$> frags) (B.pack delimiter))
   where
     breakByThenBackToStr :: [B.ByteString] -> B.ByteString -> B.ByteString
-    breakByThenBackToStr frags br = B.intercalate br $ P.toList (P.folds mappend mempty id $ PB.breaksBy br $ P.each frags)
+    breakByThenBackToStr frags br = mconcat $ P.toList (PB.unBreaksBy br $  PB.breaksBy br $ P.each frags)
+
+-- Ensure invertibility of breakBy and unBreakBy
+prop_BreakEquiv :: String -> Property
+prop_BreakEquiv delimiter =
+  forAll (arbitraryStringWithDelimiter delimiter) $ \str ->
+    forAll (arbitrarySplit str) $ \frags ->
+      str === (B.unpack $ mconcat $ P.toList $ unBreakBy (B.pack delimiter) $ breakBy (B.pack delimiter) $ P.each (B.pack <$> frags))
+
 
 return []
 runTests :: IO Bool

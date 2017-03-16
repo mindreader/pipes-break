@@ -2,7 +2,8 @@
 
 module Pipes.Break.Internal (
   _breaksBy, _unBreaksBy, _breakBy,
-  _endsBy, _unEndsBy, _endBy
+  _endsBy, _unEndsBy,
+  _unEndBy, _unBreakBy
 ) where
 
 
@@ -53,21 +54,27 @@ instance TextLike T.Text where
 
 _breaksBy, _endsBy :: (TextLike a, Monad m) => a -> Producer a m r -> FreeT (Producer a m) m r
 _breaksBy = toFreeT . _breakBy
-_endsBy = toFreeT . _endBy
+_endsBy = toFreeT . _breakBy
 
 _unBreaksBy, _unEndsBy :: (TextLike a, Monad m) => a -> FreeT (Producer a m) m r -> Producer a m r
 _unBreaksBy = intercalates . yield
 _unEndsBy del = concats . maps (<* yield del)
 
-_breakBy, _endBy :: (TextLike a, Monad m) => a -> Producer a m r -> Producer a m (Producer a m r)
-
-_breakBy a p = lift (next p) >>= \case
+_breakBy :: (TextLike a, Monad m) => a -> Producer a m r -> Producer a m (Producer a m r)
+_breakBy delim p = lift (next p) >>= \case
     Left r -> return (return r)
-    Right (bs, p') | tlNull a -> yield bs >> _breakBy a p'
-    Right (bs, p') -> execStateT (breakByP a) (yield bs >> p')
+    -- If the user supplied an empty delimiter, breakByP will infinitely loop.
+    Right (bs, p') | tlNull delim -> yield bs >> _breakBy delim p'
+    Right (bs, p') -> execStateT (breakByP delim) (yield bs >> p')
 
-_endBy = _breakBy
 
+_unEndBy :: (TextLike a, Monad m) => a -> Producer a m (Producer a m r) -> Producer a m r
+_unEndBy delim p = p <* yield delim >>= \p' -> p'
+
+_unBreakBy :: (TextLike a, Monad m) => a -> Producer a m (Producer a m r) -> Producer a m r
+_unBreakBy delim p = p >>= lift . next >>= \case
+  Left r -> return r
+  Right (bs, p') -> yield delim >> (yield bs >> p')
 
 -- | Group a producer of bytestrings into a series of producers delimited by f, where the delimiter is dropped
 toFreeT :: (TextLike a, Monad m) => (Producer a m r -> Producer a m (Producer a m r)) -> Producer a m r -> FreeT (Producer a m) m r
@@ -95,7 +102,6 @@ breakByP str = go
 
         Just bs | tlNull bs -> go
         Just bs -> case tlBreakSubstring str bs of
-               
  
            -- null suff means pref has no delimeter or partial delimiter and we need to fetch more chunks to be sure
            (_, suff) | tlNull suff -> if (tlLength str <= 1)
@@ -110,7 +116,6 @@ breakByP str = go
 
                 -- This chunk has a delimiter at index n, yield it, and undraw beginning of delimiter
                 Just n -> do
-                  -- unless (tlNull bs || n <= 0) (yieldP (tlTake n bs))
                   yieldP (tlTake n bs)
                   hoist lift (dropChars (tlLength str - (tlLength bs - n)))
 
