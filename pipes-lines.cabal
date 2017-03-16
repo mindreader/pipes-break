@@ -1,8 +1,8 @@
 name:                pipes-lines
-version:             1.0.3.3
+version:             1.0.3.4
 synopsis:            Pipes for grouping by lines with carriage returns.
 description:
-  Deprecated:  This library is deprecated in favor of http://hackage.haskell.org/package/pipes-lines,
+  Deprecated:  This library is deprecated in favor of <http://hackage.haskell.org/package/pipes-break pipes-break>,
   which is simpler, better tested, has more utility, has better understood semantics, and includes lens support.
   .
   `pipes-lines` contains utility functions for splitting lines that involve carriage returns aka lines ending in \\r\\n
