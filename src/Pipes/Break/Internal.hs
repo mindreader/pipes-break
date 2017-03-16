@@ -28,7 +28,7 @@ drawP = hoist lift draw
 unDrawP :: Monad m => a -> ParserP a m ()
 unDrawP = hoist lift . unDraw
 
-class (Show a, Monoid a, Eq a, IsString a) => TextLike a where
+class (Eq a, IsString a) => TextLike a where
   tlNull :: a -> Bool
   tlBreakSubstring :: a -> a -> (a, a)
   tlLength :: a -> Int
