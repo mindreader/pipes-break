@@ -57,6 +57,7 @@ _breaksBy = toFreeT . _breakBy
 _endsBy = toFreeT . _breakBy
 
 _unBreaksBy, _unEndsBy :: (TextLike a, Monad m) => a -> FreeT (Producer a m) m r -> Producer a m r
+
 _unBreaksBy = intercalates . yield
 _unEndsBy del = concats . maps (<* yield del)
 
@@ -96,22 +97,23 @@ breakByP str = go
         Just bs | tlNull bs -> go
         Just bs -> case tlBreakSubstring str bs of
  
-           -- null suff means pref has no delimeter or partial delimiter and we need to fetch more chunks to be sure
+           -- null suff means non null pref has no delimeter or partial delimiter so we need to fetch more chunks to
+           -- know whether rest of delimiter is incoming.
            (_, suff) | tlNull suff -> if (tlLength str <= 1)
+
               -- If the delimiter is only one character, we know it can't be in this chunk.
               then yieldP bs >> go
 
               -- Starting with one less than the length of delimiter, test the end of this chunk.
-              else hoist lift (chunkEndsWith str bs (max(tlLength bs - (tlLength str - 1)) 0)) >>= \case
+              else hoist lift (chunkEndsWith str bs (max (tlLength bs - (tlLength str - 1)) 0)) >>= \case
 
                 -- The end of this chunk does begin with the delimiter, get more chunks, keep going.
                 Nothing -> yieldP bs >> go
 
-                -- This chunk has a delimiter at index n, yield it, and undraw beginning of delimiter
+                -- This chunk has a delimiter at index n, yield up to it, drop remainder of delimiter from rest of stream.
                 Just n -> do
                   yieldP (tlTake n bs)
                   hoist lift (dropChars (tlLength str - (tlLength bs - n)))
-
 
            -- non null suff means suff has delimiter.
            -- pref must be yielded if it is non null
@@ -119,7 +121,7 @@ breakByP str = go
               yieldP pref
               unDrawP (tlDrop (tlLength str) suff)
 
-
+-- Drop n characters from the stream.
 dropChars :: (TextLike a, Monad m) => Int -> P.Parser a m ()
 dropChars 0 = return ()
 dropChars n = draw >>= \case
@@ -136,7 +138,7 @@ chunkEndsWith str = go
           True -> return (Just n)
           False -> go bs $! (n + 1)
 
--- if Producer starts with a, return True.  Never advances the stream.
+-- if first chunk and rest of Producer with rest starts with a, return True.  Never advances the stream.
 startsWith :: (TextLike a, Monad m) => a -> a -> P.Parser a m Bool
 startsWith = go1
   where
