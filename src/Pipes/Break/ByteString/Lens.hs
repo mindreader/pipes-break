@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 {- | For those who like lenses, here are Lens library versions of the functions from Pipes.Break.Text
- -
+
      To learn more about using lenses to manipulate pipes, check out the in depth tutorial at
      <http://hackage.haskell.org/package/pipes-group/docs/Pipes-Group-Tutorial.html>
 
@@ -22,7 +22,6 @@ module Pipes.Break.ByteString.Lens (
   --
   -- $breakbyoverview
   breaksBy, unBreaksBy,
-
 ) where
 
 import Pipes as P

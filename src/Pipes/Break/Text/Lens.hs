@@ -12,7 +12,7 @@
 > > fmap mconcat <$> P.toListM $
 >     over (endsBy "\n\n" . individually) (over (endsBy "\n" . individually) id)
 >        (yield "A\nB\n\nA\nB\nC\n\n")
->  "A\nB\n\n\nA\nB\nC\n\n\n\n\n"
+> "A\nB\n\n\nA\nB\nC\n\n\n\n\n"
 
   As you can see, this would result in the wrong number of newlines being appended when reforming.
 -}
