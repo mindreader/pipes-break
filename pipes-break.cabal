@@ -1,5 +1,5 @@
 name:                pipes-break
-version:             0.2.0.5
+version:             0.2.0.6
 synopsis:            Pipes to group by any delimiter (such as lines with carriage returns)
 description:
   `pipes-break` contains utility functions for splitting bytestring or text with any delimiter you like.
