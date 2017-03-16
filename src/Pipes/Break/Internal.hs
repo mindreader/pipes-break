@@ -61,11 +61,13 @@ _unBreaksBy = intercalates . yield
 _unEndsBy del = concats . maps (<* yield del)
 
 _breakBy :: (TextLike a, Monad m) => a -> Producer a m r -> Producer a m (Producer a m r)
-_breakBy delim p = lift (next p) >>= \case
-    Left r -> return (return r)
-    -- If the user supplied an empty delimiter, breakByP will infinitely loop.
-    Right (bs, p') | tlNull delim -> yield bs >> _breakBy delim p'
-    Right (bs, p') -> execStateT (breakByP delim) (yield bs >> p')
+-- If the user supplied an empty delimiter, breakByP would infinitely loop.
+_breakBy delim | tlNull delim = \p -> for p yield >>= return . return
+_breakBy delim = go
+  where
+    go p  = lift (next p) >>= \case
+      Left r -> return (return r)
+      Right (bs, p') -> execStateT (breakByP delim) (yield bs >> p')
 
 
 _unEndBy :: (TextLike a, Monad m) => a -> Producer a m (Producer a m r) -> Producer a m r
