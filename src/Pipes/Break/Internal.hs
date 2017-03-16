@@ -93,9 +93,7 @@ breakByP str = go
       drawP >>= \case
         Nothing -> return ()
 
-        -- if chunk is null it must be yielded unaltered in order to ever know a delimiter might be
-        -- about to be stripped away
-        Just bs | tlNull bs -> yieldP bs >> go
+        Just bs | tlNull bs -> go
         Just bs -> case tlBreakSubstring str bs of
                
  
