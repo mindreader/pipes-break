@@ -24,6 +24,7 @@ module Pipes.Break.ByteString (
   -- In other words:
   --
   -- > unEndsBy delim (endsBy delim foo) ≠ foo
+  -- > unEndBy delim (endBy delim foo) ≠ foo
   endBy, unEndBy, endsBy, unEndsBy,
 
   -- * Utilities
