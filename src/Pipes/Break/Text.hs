@@ -8,7 +8,6 @@ module Pipes.Break.Text (
   --
   -- > unBreaksBy delim (breaksBy delim foo) ≡ foo
   -- > unBreakBy delim (breakBy delim foo) ≡ foo
-  --
   breakBy, unBreakBy, breaksBy, unBreaksBy,
 
   -- * Group Producers Ending By A Delimiter

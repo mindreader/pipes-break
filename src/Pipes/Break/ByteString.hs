@@ -8,8 +8,6 @@ module Pipes.Break.ByteString (
   --
   -- > unBreaksBy delim (breaksBy delim foo) ≡ foo
   -- > unBreakBy delim (breakBy delim foo) ≡ foo
-  --
-  -- with the presumption that two 'Producer's are "equivalent" if they produce the same string when drained.
   breakBy, unBreakBy, breaksBy, unBreaksBy,
 
   -- * Group Producers Ending By A Delimiter
