@@ -83,12 +83,7 @@ toFreeT f = FreeT . go0
         Left r       -> return (Pure r)
         Right (bs, p') -> return $ Free (go1 (yield bs >> p'))
 
-    go1 p = do
-      p' <- f p
-      return $ FreeT $ do
-        next p' >>= \case
-          Left r -> return (Pure r)
-          Right (bs, p'') -> go0 (yield bs >> p'')
+    go1 p = f p >>= return . FreeT . go0
 
 -- Yield data from underlying producer before the delimiter, while stripping the delimeter out.
 breakByP :: (TextLike a, Monad m) => a -> ParserP a m ()
