@@ -60,6 +60,7 @@ breaksBy = _breaksBy
 -- >>> runEffect $ for rest (lift . print)
 -- "B\r\nC\r\n"
 --
--- This is equivalent to Pipes.ByteString.line except that it works for any delimiter, not just '\n'
+-- This is almost equivalent to Pipes.ByteString.line except that it works for any delimiter, not just '\n'.
+-- It also consumes the delimiter.
 breakBy :: (Monad m) => B.ByteString -> Producer B.ByteString m r -> Producer B.ByteString m (Producer B.ByteString m r)
 breakBy = _breakBy

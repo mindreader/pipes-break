@@ -65,6 +65,7 @@ breaksBy = _breaksBy
 -- >>> runEffect $ for rest (lift . print)
 -- "B\r\nC\r\n"
 --
--- This is equivalent to Pipes.Text.line except that it works for any delimiter, not just '\n'
+-- This is almost equivalent to Pipes.Text.line except that it works for any delimiter, not just '\n'.
+-- It also consumes the delimiter.
 breakBy :: (Monad m) => T.Text -> Producer T.Text m r -> Producer T.Text m (Producer T.Text m r)
 breakBy = _breakBy
